@@ -1,0 +1,56 @@
+[project]
+name = "rag-cost-governor"
+version = "0.1.0"
+description = "Cost-governed multi-agent RAG over SEC 10-K filings"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { file = "LICENSE" }
+authors = [{ name = "Nikita Yuryev" }]
+dependencies = [
+    "langgraph>=0.1",
+    "langchain-core>=0.3",
+    "qdrant-client>=1.10",
+    "fastembed>=0.4",
+    "prometheus-client>=0.21",
+    "pydantic>=2.9",
+    "pydantic-settings>=2.6",
+    "requests>=2.32",
+]
+
+[project.optional-dependencies]
+openai = ["langchain-openai>=0.2"]
+anthropic = ["anthropic>=0.40"]
+dev = [
+    "pytest>=8",
+    "ruff>=0.8",
+    "mypy>=1.13",
+]
+
+[project.scripts]
+rag-cost-governor = "rag_cost_governor.cli:main"
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = false
+ignore_missing_imports = true
+packages = ["rag_cost_governor"]
+mypy_path = "src"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra -q"
