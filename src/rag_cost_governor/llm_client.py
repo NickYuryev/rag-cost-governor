@@ -10,9 +10,13 @@ from prometheus_client import Counter, Histogram
 
 logger = logging.getLogger(__name__)
 
+# Published list prices as of 2025-10. Kept here so cost accounting stays in-process
+# and does not depend on a provider billing roundtrip.
 PRICES_USD_PER_1K: dict[str, tuple[float, float]] = {
     "gpt-4o-mini": (0.00015, 0.0006),
     "gpt-4o": (0.0025, 0.01),
+    "claude-haiku-5-5": (0.0008, 0.004),
+    "claude-sonnet-5-5": (0.003, 0.015),
     "mock": (0.0001, 0.0004),
 }
 
@@ -60,6 +64,13 @@ def worst_case_cost(model: str, prompt_tokens: int, max_tokens: int) -> float:
 
 
 class MockBackend:
+    """Deterministic backend for tests and offline eval.
+
+    Returns one of a few canned responses by looking at the first prompt line, and
+    counts tokens as whitespace-separated words. Numbers are chosen to exercise
+    the verifier.
+    """
+
     model = "mock"
 
     def __init__(self, canned: dict[str, str] | None = None) -> None:
@@ -75,7 +86,7 @@ class MockBackend:
 
 class OpenAIBackend:
     def __init__(self, model: str, api_key: str) -> None:
-        from openai import OpenAI
+        from openai import OpenAI  # imported lazily so the dep stays optional
 
         self.model = model
         self._client = OpenAI(api_key=api_key)
@@ -94,7 +105,32 @@ class OpenAIBackend:
         return LLMResponse(text, t_in, t_out, price(self.model, t_in, t_out))
 
 
+class AnthropicBackend:
+    def __init__(self, model: str, api_key: str) -> None:
+        import anthropic
+
+        self.model = model
+        self._client = anthropic.Anthropic(api_key=api_key)
+
+    def complete(self, prompt: str, max_tokens: int) -> LLMResponse:
+        resp = self._client.messages.create(
+            model=self.model,
+            max_tokens=max_tokens,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        text = "".join(b.text for b in resp.content if getattr(b, "type", None) == "text")
+        t_in = resp.usage.input_tokens
+        t_out = resp.usage.output_tokens
+        return LLMResponse(text, t_in, t_out, price(self.model, t_in, t_out))
+
+
 class InstrumentedLLM:
+    """Wraps a backend with prometheus metrics and a per-call node label.
+
+    `call` is the only thing nodes should touch. The budget check is done by the
+    graph edge, not here, so this stays provider-shaped.
+    """
+
     def __init__(self, backend: LLMBackend) -> None:
         self._backend = backend
 
@@ -129,6 +165,11 @@ def build_from_env() -> InstrumentedLLM:
         if not key:
             raise RuntimeError("RCG_LLM_BACKEND=openai but OPENAI_API_KEY is empty")
         return InstrumentedLLM(OpenAIBackend(s.llm_model, key))
+    if backend_name == "anthropic":
+        key = s.anthropic_api_key or os.environ.get("ANTHROPIC_API_KEY", "")
+        if not key:
+            raise RuntimeError("RCG_LLM_BACKEND=anthropic but ANTHROPIC_API_KEY is empty")
+        return InstrumentedLLM(AnthropicBackend(s.llm_model, key))
     if backend_name == "mock":
         return InstrumentedLLM(MockBackend())
     raise ValueError(f"unknown backend: {backend_name}")
