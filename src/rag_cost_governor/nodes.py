@@ -74,3 +74,20 @@ def planner(state: GraphState, deps: NodeDeps) -> GraphState:
     return {**state, "subqueries": subs}
 
 
+# --- retriever ----------------------------------------------------------
+
+def retriever(state: GraphState, deps: NodeDeps) -> GraphState:
+    seen: set[tuple[str, int]] = set()
+    hits: list[Hit] = []
+    for q in state.get("subqueries", [state["question"]]):
+        vec = deps.embedder.embed_one(q)
+        for h in deps.store.search(vec, top_k=deps.top_k):
+            key = (h.doc_id, h.page)
+            if key in seen:
+                continue
+            seen.add(key)
+            hits.append(h)
+    hits.sort(key=lambda h: h.score, reverse=True)
+    return {**state, "hits": hits[: deps.top_k * 2]}
+
+
