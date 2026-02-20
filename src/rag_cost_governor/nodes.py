@@ -91,3 +91,33 @@ def retriever(state: GraphState, deps: NodeDeps) -> GraphState:
     return {**state, "hits": hits[: deps.top_k * 2]}
 
 
+# --- drafter ------------------------------------------------------------
+
+DRAFTER_PROMPT = """Answer the question using only the context below. Every factual
+sentence must end with a citation of the form [doc_id:page], copied from the context.
+Do not invent citations. If the context does not contain the answer, say so plainly.
+
+Question: {q}
+
+Context:
+{ctx}
+
+Answer:
+"""
+
+
+def _format_context(hits: list[Hit]) -> str:
+    return "\n\n".join(f"[{h.doc_id}:{h.page}] {h.text}" for h in hits)
+
+
+def drafter(state: GraphState, deps: NodeDeps) -> GraphState:
+    hits = state.get("hits", [])
+    if not hits:
+        return {**state, "draft": "no relevant passages were retrieved."}
+    prompt = DRAFTER_PROMPT.format(q=state["question"], ctx=_format_context(hits))
+    text = deps.call("drafter", prompt, state, deps.draft_max_tokens)
+    if text is None:
+        return state
+    return {**state, "draft": text.strip()}
+
+
