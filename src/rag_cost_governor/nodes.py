@@ -121,3 +121,94 @@ def drafter(state: GraphState, deps: NodeDeps) -> GraphState:
     return {**state, "draft": text.strip()}
 
 
+# --- verifier -----------------------------------------------------------
+
+# Match percentages, currency, counts, and bare numbers with units. The pattern is
+# deliberately loose; the verifier's job is to flag claims to check, not to parse them.
+_CLAIM_RE = re.compile(
+    r"""
+    (?:\$|US\$|USD\s)?           # optional currency sign
+    \d{1,3}(?:[,\s]\d{3})*         # digits with thousands separators
+    (?:\.\d+)?                   # optional decimal
+    (?:\s*(?:%|percent|bps|bn|billion|million|m|k|thousand|USD))?
+    """,
+    re.VERBOSE | re.IGNORECASE,
+)
+_CITE_RE = re.compile(r"\[([a-z0-9_\-]+):(\d+)\]")
+
+
+def _normalise(num: str) -> float | None:
+    s = num.replace(",", "").replace(" ", "").replace("$", "").upper()
+    mult = 1.0
+    if s.endswith("%"):
+        s = s[:-1]
+    elif s.endswith("BPS"):
+        s = s[:-3]
+        mult = 0.01
+    elif s.endswith(("BN", "BILLION")):
+        s = s.removesuffix("BILLION").removesuffix("BN")
+        mult = 1e9
+    elif s.endswith(("M", "MILLION")):
+        s = s.removesuffix("MILLION").removesuffix("M")
+        mult = 1e6
+    elif s.endswith(("K", "THOUSAND")):
+        s = s.removesuffix("THOUSAND").removesuffix("K")
+        mult = 1e3
+    try:
+        return float(s) * mult
+    except ValueError:
+        return None
+
+
+def _supported(sentence: str, hits_by_cite: dict[str, str], tol_pct: float) -> bool:
+    citations = _CITE_RE.findall(sentence)
+    if not citations:
+        return True  # not a quantitative claim worth gating on
+    corpus = " ".join(hits_by_cite.get(f"{d}:{p}", "") for d, p in citations)
+    if not corpus:
+        return False
+    # Strip the citation markers before extracting numbers, so the page number in
+    # a citation does not count as a claim.
+    body = _CITE_RE.sub(" ", sentence)
+    numbers = [m.group(0) for m in _CLAIM_RE.finditer(body) if any(ch.isdigit() for ch in m.group(0))]
+    if not numbers:
+        return True
+    corpus_numbers = [m.group(0) for m in _CLAIM_RE.finditer(corpus) if any(ch.isdigit() for ch in m.group(0))]
+    corpus_values = [v for v in (_normalise(n) for n in corpus_numbers) if v is not None]
+    for n in numbers:
+        v = _normalise(n)
+        if v is None:
+            continue
+        if not any(_close(v, c, tol_pct) for c in corpus_values):
+            return False
+    return True
+
+
+def _close(a: float, b: float, tol_pct: float) -> bool:
+    if b == 0:
+        return abs(a) < 1e-9
+    return abs(a - b) / abs(b) * 100.0 <= tol_pct
+
+
+def verifier(state: GraphState, deps: NodeDeps) -> GraphState:
+    draft = state.get("draft", "")
+    hits_by_cite = {f"{h.doc_id}:{h.page}": h.text for h in state.get("hits", [])}
+    sentences = re.split(r"(?<=[\.\?!])\s+", draft)
+    kept: list[str] = []
+    unsupported: list[str] = list(state.get("unsupported", []))
+    for s in sentences:
+        if not s.strip():
+            continue
+        try:
+            ok = _supported(s, hits_by_cite, deps.verifier_tolerance_pct)
+        except Exception as e:  # verifier is fail-open: a parser miss should not kill the query
+            log.warning("verifier regex miss: %s (%s)", e, s[:80])
+            ok = True
+        if ok:
+            kept.append(s)
+        else:
+            unsupported.append(s)
+    answer = " ".join(kept).strip() or draft
+    if unsupported:
+        answer += "\n\n[dropped unsupported claims: " + " | ".join(unsupported) + "]"
+    return {**state, "answer": answer, "unsupported": unsupported}
