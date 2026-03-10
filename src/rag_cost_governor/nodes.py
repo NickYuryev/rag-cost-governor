@@ -128,7 +128,7 @@ def drafter(state: GraphState, deps: NodeDeps) -> GraphState:
 _CLAIM_RE = re.compile(
     r"""
     (?:\$|US\$|USD\s)?           # optional currency sign
-    \d{1,3}(?:[,\s]\d{3})*         # digits with thousands separators
+    \d+(?:,\d{3})*               # one or more digits, with optional thousands commas
     (?:\.\d+)?                   # optional decimal
     (?:\s*(?:%|percent|bps|bn|billion|million|m|k|thousand|USD))?
     """,
