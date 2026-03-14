@@ -193,7 +193,15 @@ def _close(a: float, b: float, tol_pct: float) -> bool:
 def verifier(state: GraphState, deps: NodeDeps) -> GraphState:
     draft = state.get("draft", "")
     hits_by_cite = {f"{h.doc_id}:{h.page}": h.text for h in state.get("hits", [])}
-    sentences = re.split(r"(?<=[\.\?!])\s+", draft)
+    raw = re.split(r"(?<=[\.\?!])\s+", draft)
+    # A trailing citation after a sentence boundary ("... 2024. [doc:page]") belongs
+    # to the sentence it follows; merge it back so the citation gates the right claim.
+    sentences: list[str] = []
+    for part in raw:
+        if _CITE_RE.fullmatch(part.strip()) and sentences:
+            sentences[-1] = sentences[-1] + " " + part
+        else:
+            sentences.append(part)
     kept: list[str] = []
     unsupported: list[str] = list(state.get("unsupported", []))
     for s in sentences:
