@@ -2,6 +2,10 @@
 
 Usage:
     python scripts/ingest.py --tickers MSFT GOOGL --year 2024
+
+The EDGAR api is public but rate-limited and insists on an identifying User-Agent;
+we read that from RCG_EDGAR_USER_AGENT. The script writes the raw filing to
+`data/filings/<doc_id>.html` so re-runs are cache-friendly.
 """
 from __future__ import annotations
 
@@ -29,12 +33,13 @@ TICKER_CIK = {
     "NVDA": "0001045810",
 }
 
-PAGE_CHARS = 2800
+PAGE_CHARS = 2800  # ~700 tokens per chunk
 
 
-def fetch_latest_10k_url(cik: str, year: int) -> str:
+def fetch_latest_10k_url(cik: str, year: int, ua: str) -> str:
+    """Return the url of the first 10-K for the given cik filed in `year`."""
     url = f"https://data.sec.gov/submissions/CIK{cik}.json"
-    r = requests.get(url, timeout=30)
+    r = requests.get(url, headers={"User-Agent": ua}, timeout=30)
     r.raise_for_status()
     recent = r.json()["filings"]["recent"]
     for i, form in enumerate(recent["form"]):
@@ -67,7 +72,7 @@ def chunk_text(text: str, size: int = PAGE_CHARS) -> list[str]:
     return out
 
 
-def ingest_one(ticker: str, year: int, cache: Path) -> list[Chunk]:
+def ingest_one(ticker: str, year: int, ua: str, cache: Path) -> list[Chunk]:
     cik = TICKER_CIK[ticker]
     doc_id = f"{ticker.lower()}-10k-{year}"
     cache_path = cache / f"{doc_id}.html"
@@ -75,13 +80,13 @@ def ingest_one(ticker: str, year: int, cache: Path) -> list[Chunk]:
         log.info("cache hit %s", cache_path)
         html = cache_path.read_text()
     else:
-        url = fetch_latest_10k_url(cik, year)
+        url = fetch_latest_10k_url(cik, year, ua)
         log.info("fetching %s", url)
-        r = requests.get(url, timeout=60)
+        r = requests.get(url, headers={"User-Agent": ua}, timeout=60)
         r.raise_for_status()
         html = r.text
         cache_path.write_text(html)
-        time.sleep(0.2)
+        time.sleep(0.2)  # EDGAR limits to ~10 req/s per client.
     text = strip_html(html)
     pieces = chunk_text(text)
     log.info("%s chunked into %d pieces (%d chars)", doc_id, len(pieces), len(text))
@@ -102,7 +107,7 @@ def main() -> None:
     store = VectorStore(cfg.qdrant_url, cfg.qdrant_collection, embedder.dim)
 
     for ticker in args.tickers:
-        chunks = ingest_one(ticker, args.year, cache)
+        chunks = ingest_one(ticker, args.year, cfg.edgar_user_agent, cache)
         if not chunks:
             continue
         vecs = embedder.embed([c.text for c in chunks])
