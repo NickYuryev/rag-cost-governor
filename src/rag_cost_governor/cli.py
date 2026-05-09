@@ -29,8 +29,12 @@ def main(argv: list[str] | None = None) -> int:
     )
     settings = load()
 
-    start_http_server(settings.metrics_port)
-    log.info("prometheus exporter on :%d", settings.metrics_port)
+    if settings.metrics_port and not args.metrics_dump:
+        try:
+            start_http_server(settings.metrics_port)
+            log.info("prometheus exporter on :%d", settings.metrics_port)
+        except OSError as e:
+            log.warning("could not start metrics exporter: %s", e)
 
     try:
         llm = build_from_env()
