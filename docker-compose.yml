@@ -1,0 +1,35 @@
+services:
+  qdrant:
+    image: qdrant/qdrant:v1.12.4
+    restart: unless-stopped
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    restart: unless-stopped
+    ports:
+      - "9091:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+
+  grafana:
+    image: grafana/grafana:11.3.1
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+    volumes:
+      - ./grafana/dashboard.json:/var/lib/grafana/dashboards/rcg.json:ro
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+
+volumes:
+  qdrant_data: {}
