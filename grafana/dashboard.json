@@ -1,0 +1,110 @@
+{
+  "title": "rag-cost-governor",
+  "uid": "rcg-main",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "5s",
+  "time": { "from": "now-15m", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "cost per minute by node",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum by (node) (rate(rcg_cost_usd_total[1m]))",
+          "legendFormat": "{{node}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "currencyUSD" }
+      }
+    },
+    {
+      "id": 2,
+      "title": "tokens in/out per minute",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum by (node) (rate(rcg_tokens_in_total[1m]))",
+          "legendFormat": "in {{node}}",
+          "refId": "A"
+        },
+        {
+          "expr": "sum by (node) (rate(rcg_tokens_out_total[1m]))",
+          "legendFormat": "out {{node}}",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "llm p95 latency by node",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, node) (rate(rcg_request_duration_seconds_bucket[5m])))",
+          "legendFormat": "p95 {{node}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "s" }
+      }
+    },
+    {
+      "id": 4,
+      "title": "budget pressure",
+      "type": "stat",
+      "gridPos": { "x": 12, "y": 8, "w": 6, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "increase(rcg_budget_exhausted_total[15m])",
+          "legendFormat": "exhausted (15m)",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "settled vs reserved",
+      "type": "timeseries",
+      "gridPos": { "x": 18, "y": 8, "w": 6, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "rate(rcg_budget_settled_usd_total[1m])",
+          "legendFormat": "settled/s",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(rcg_budget_reserved_usd_total[1m])",
+          "legendFormat": "reserved/s",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "failure rate",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 16, "w": 24, "h": 6 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum by (node, reason) (rate(rcg_request_failures_total[5m]))",
+          "legendFormat": "{{node}} {{reason}}",
+          "refId": "A"
+        }
+      ]
+    }
+  ]
+}
