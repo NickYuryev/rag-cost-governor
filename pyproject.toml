@@ -7,9 +7,9 @@ requires-python = ">=3.11"
 license = { file = "LICENSE" }
 authors = [{ name = "Nikita Yuryev" }]
 dependencies = [
-    "langgraph>=0.1",
+    "langgraph>=0.2",
     "langchain-core>=0.3",
-    "qdrant-client>=1.10",
+    "qdrant-client>=1.12",
     "fastembed>=0.4",
     "prometheus-client>=0.21",
     "pydantic>=2.9",
