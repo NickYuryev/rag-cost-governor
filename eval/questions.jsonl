@@ -1,0 +1,10 @@
+{"id": "q01", "question": "What was Microsoft Cloud revenue in fiscal 2024?", "expected_doc": "msft-10k-2024", "expected_numbers": ["137.4"]}
+{"id": "q02", "question": "By what percentage did Microsoft's Server products and cloud services revenue increase in fiscal 2024?", "expected_doc": "msft-10k-2024", "expected_numbers": ["22"]}
+{"id": "q03", "question": "What were Google Services revenues in 2024?", "expected_doc": "googl-10k-2024", "expected_numbers": ["305.6"]}
+{"id": "q04", "question": "By what percentage did Google Cloud revenues grow in 2024?", "expected_doc": "googl-10k-2024", "expected_numbers": ["31"]}
+{"id": "q05", "question": "List the top risk factors Microsoft mentions in Item 1A.", "expected_doc": "msft-10k-2024", "expected_numbers": []}
+{"id": "q06", "question": "What is Microsoft's gross margin in fiscal 2024?", "expected_doc": "msft-10k-2024", "expected_numbers": []}
+{"id": "q07", "question": "What did Google say about artificial intelligence investments in 2024?", "expected_doc": "googl-10k-2024", "expected_numbers": []}
+{"id": "q08", "question": "How much did Alphabet spend on research and development in 2024?", "expected_doc": "googl-10k-2024", "expected_numbers": []}
+{"id": "q09", "question": "What was Google Cloud revenue in 2024 in US dollars?", "expected_doc": "googl-10k-2024", "expected_numbers": ["43.2"]}
+{"id": "q10", "question": "Did Microsoft report Server products and cloud services revenue growth of 22%?", "expected_doc": "msft-10k-2024", "expected_numbers": ["22"]}
