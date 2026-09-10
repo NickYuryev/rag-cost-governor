@@ -33,8 +33,12 @@ class VectorStore:
     def __init__(self, url: str, collection: str, dim: int) -> None:
         if url == ":memory:":
             self._client = QdrantClient(":memory:")
-        else:
+        elif url.startswith(("http://", "https://")):
             self._client = QdrantClient(url=url)
+        else:
+            # anything else is a local file path; qdrant-client ships an embedded mode
+            # that persists to disk, so docker-compose is optional for a demo.
+            self._client = QdrantClient(path=url)
         self._collection = collection
         self._ensure(dim)
 
