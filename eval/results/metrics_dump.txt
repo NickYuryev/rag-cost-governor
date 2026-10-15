@@ -1,0 +1,42 @@
+# HELP rcg_budget_reserved_usd_total Reserved worst-case cost in USD
+# TYPE rcg_budget_reserved_usd_total counter
+rcg_budget_reserved_usd_total 0.001566
+# HELP rcg_budget_settled_usd_total Settled actual cost in USD
+# TYPE rcg_budget_settled_usd_total counter
+rcg_budget_settled_usd_total 0.000693
+# HELP rcg_budget_exhausted_total Queries that short-circuited on budget
+# TYPE rcg_budget_exhausted_total counter
+rcg_budget_exhausted_total 1.0
+# HELP rcg_tokens_in_total Prompt tokens sent to the LLM
+# TYPE rcg_tokens_in_total counter
+rcg_tokens_in_total{model="gpt-4o-mini",node="planner"} 120.0
+rcg_tokens_in_total{model="gpt-4o-mini",node="drafter"} 2412.0
+# HELP rcg_tokens_out_total Completion tokens received from the LLM
+# TYPE rcg_tokens_out_total counter
+rcg_tokens_out_total{model="gpt-4o-mini",node="planner"} 76.0
+rcg_tokens_out_total{model="gpt-4o-mini",node="drafter"} 453.0
+# HELP rcg_cost_usd_total Settled cost in USD
+# TYPE rcg_cost_usd_total counter
+rcg_cost_usd_total{model="gpt-4o-mini",node="planner"} 0.0000636
+rcg_cost_usd_total{model="gpt-4o-mini",node="drafter"} 0.00062898
+# HELP rcg_request_duration_seconds LLM request wall time
+# TYPE rcg_request_duration_seconds histogram
+rcg_request_duration_seconds_bucket{le="0.05",model="gpt-4o-mini",node="planner"} 0.0
+rcg_request_duration_seconds_bucket{le="0.1",model="gpt-4o-mini",node="planner"} 0.0
+rcg_request_duration_seconds_bucket{le="0.25",model="gpt-4o-mini",node="planner"} 0.0
+rcg_request_duration_seconds_bucket{le="0.5",model="gpt-4o-mini",node="planner"} 1.0
+rcg_request_duration_seconds_bucket{le="1",model="gpt-4o-mini",node="planner"} 3.0
+rcg_request_duration_seconds_bucket{le="2",model="gpt-4o-mini",node="planner"} 3.0
+rcg_request_duration_seconds_bucket{le="5",model="gpt-4o-mini",node="planner"} 3.0
+rcg_request_duration_seconds_bucket{le="+Inf",model="gpt-4o-mini",node="planner"} 3.0
+rcg_request_duration_seconds_count{model="gpt-4o-mini",node="planner"} 3.0
+rcg_request_duration_seconds_sum{model="gpt-4o-mini",node="planner"} 1.483
+rcg_request_duration_seconds_bucket{le="0.5",model="gpt-4o-mini",node="drafter"} 0.0
+rcg_request_duration_seconds_bucket{le="1",model="gpt-4o-mini",node="drafter"} 0.0
+rcg_request_duration_seconds_bucket{le="2",model="gpt-4o-mini",node="drafter"} 2.0
+rcg_request_duration_seconds_bucket{le="5",model="gpt-4o-mini",node="drafter"} 3.0
+rcg_request_duration_seconds_bucket{le="+Inf",model="gpt-4o-mini",node="drafter"} 3.0
+rcg_request_duration_seconds_count{model="gpt-4o-mini",node="drafter"} 3.0
+rcg_request_duration_seconds_sum{model="gpt-4o-mini",node="drafter"} 5.332
+# HELP rcg_request_failures_total LLM request failures
+# TYPE rcg_request_failures_total counter

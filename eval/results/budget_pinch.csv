@@ -1,0 +1,11 @@
+id,question,citation_hit,number_hit,retries,budget_exhausted,cost_usd,latency_s,n_subqueries,n_hits,n_unsupported,model
+q01,What was Microsoft Cloud revenue in fiscal 2024?,False,True,0,True,0.0,0.001,1,0,0,gpt-4o-mini
+q02,By what percentage did Microsoft's Server products and cloud services revenue increase in fiscal 2024?,False,True,0,True,0.0,0.001,1,0,0,gpt-4o-mini
+q03,What were Google Services revenues in 2024?,False,True,0,True,0.0,0.001,1,0,0,gpt-4o-mini
+q04,By what percentage did Google Cloud revenues grow in 2024?,False,True,0,True,0.0,0.001,1,0,0,gpt-4o-mini
+q05,List the top risk factors Microsoft mentions in Item 1A.,False,True,0,True,0.0,0.001,1,0,0,gpt-4o-mini
+q06,What is Microsoft's gross margin in fiscal 2024?,False,True,0,True,0.0,0.001,1,0,0,gpt-4o-mini
+q07,What did Google say about artificial intelligence investments in 2024?,False,True,0,True,0.0,0.001,1,0,0,gpt-4o-mini
+q08,How much did Alphabet spend on research and development in 2024?,False,True,0,True,0.0,0.001,1,0,0,gpt-4o-mini
+q09,What was Google Cloud revenue in 2024 in US dollars?,False,True,0,True,0.0,0.001,1,0,0,gpt-4o-mini
+q10,Did Microsoft report Server products and cloud services revenue growth of 22%?,False,True,0,True,0.0,0.001,1,0,0,gpt-4o-mini
