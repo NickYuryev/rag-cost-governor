@@ -19,6 +19,7 @@ import time
 from pathlib import Path
 
 import requests
+from tqdm import tqdm
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
@@ -115,7 +116,8 @@ def main() -> None:
         chunks = ingest_one(ticker, args.year, args.form, cfg.edgar_user_agent, cache)
         if not chunks:
             continue
-        vecs = embedder.embed([c.text for c in chunks])
+        texts = [c.text for c in chunks]
+        vecs = list(tqdm(embedder.embed_iter(texts), total=len(texts), desc=f"embed {ticker}"))
         n = store.upsert(chunks, vecs)
         log.info("upserted %d chunks for %s", n, ticker)
     log.info("collection now holds %d points", store.count())

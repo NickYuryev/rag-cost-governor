@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator
 
 from fastembed import TextEmbedding
 
@@ -25,6 +25,10 @@ class LocalEmbedder:
 
     def embed(self, texts: Iterable[str]) -> list[list[float]]:
         return [list(v) for v in self._model.embed(list(texts))]
+
+    def embed_iter(self, texts: list[str]) -> Iterator[list[float]]:
+        for v in self._model.embed(texts):
+            yield list(v)
 
     def embed_one(self, text: str) -> list[float]:
         return self.embed([text])[0]
