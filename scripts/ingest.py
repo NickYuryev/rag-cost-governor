@@ -1,11 +1,13 @@
-"""Fetch SEC 10-K filings, chunk, embed and upsert into qdrant.
+"""Fetch SEC filings, chunk, embed and upsert into qdrant.
 
 Usage:
     python scripts/ingest.py --tickers MSFT GOOGL --year 2024
+    python scripts/ingest.py --tickers ANTHROPIC --form S-1 --year 2026
 
-The EDGAR api is public but rate-limited and insists on an identifying User-Agent;
-we read that from RCG_EDGAR_USER_AGENT. The script writes the raw filing to
-`data/filings/<doc_id>.html` so re-runs are cache-friendly.
+--form matches by prefix, so "S-1" also picks up S-1/A amendments and "10-K"
+also picks up 10-K/A. the EDGAR api is public but rate-limited and insists on
+an identifying User-Agent, read from RCG_EDGAR_USER_AGENT. the raw filing
+goes to data/filings/<doc_id>.html so re-runs are cache-friendly.
 """
 from __future__ import annotations
 
@@ -31,26 +33,27 @@ TICKER_CIK = {
     "MSFT": "0000789019",
     "GOOGL": "0001652044",
     "NVDA": "0001045810",
+    "ANTHROPIC": "0002130357",
 }
 
 PAGE_CHARS = 2800  # ~700 tokens per chunk
 
 
-def fetch_latest_10k_url(cik: str, year: int, ua: str) -> str:
-    """Return the url of the first 10-K for the given cik filed in `year`."""
+def fetch_latest_filing_url(cik: str, year: int, form_prefix: str, ua: str) -> str:
+    """URL of the first filing whose form starts with `form_prefix` (so S-1 also catches S-1/A)."""
     url = f"https://data.sec.gov/submissions/CIK{cik}.json"
     r = requests.get(url, headers={"User-Agent": ua}, timeout=30)
     r.raise_for_status()
     recent = r.json()["filings"]["recent"]
     for i, form in enumerate(recent["form"]):
-        if form != "10-K":
+        if not form.startswith(form_prefix):
             continue
         if not recent["filingDate"][i].startswith(str(year)):
             continue
         acc = recent["accessionNumber"][i].replace("-", "")
         doc = recent["primaryDocument"][i]
         return f"https://www.sec.gov/Archives/edgar/data/{int(cik)}/{acc}/{doc}"
-    raise RuntimeError(f"no 10-K found for cik={cik} year={year}")
+    raise RuntimeError(f"no {form_prefix} found for cik={cik} year={year}")
 
 
 def strip_html(html: str) -> str:
@@ -72,15 +75,16 @@ def chunk_text(text: str, size: int = PAGE_CHARS) -> list[str]:
     return out
 
 
-def ingest_one(ticker: str, year: int, ua: str, cache: Path) -> list[Chunk]:
+def ingest_one(ticker: str, year: int, form_prefix: str, ua: str, cache: Path) -> list[Chunk]:
     cik = TICKER_CIK[ticker]
-    doc_id = f"{ticker.lower()}-10k-{year}"
+    slug = form_prefix.lower().replace("-", "").replace("/", "")
+    doc_id = f"{ticker.lower()}-{slug}-{year}"
     cache_path = cache / f"{doc_id}.html"
     if cache_path.exists():
         log.info("cache hit %s", cache_path)
         html = cache_path.read_text()
     else:
-        url = fetch_latest_10k_url(cik, year, ua)
+        url = fetch_latest_filing_url(cik, year, form_prefix, ua)
         log.info("fetching %s", url)
         r = requests.get(url, headers={"User-Agent": ua}, timeout=60)
         r.raise_for_status()
@@ -97,6 +101,7 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--tickers", nargs="+", default=["MSFT", "GOOGL"])
     ap.add_argument("--year", type=int, default=2024)
+    ap.add_argument("--form", default="10-K", help="form prefix: 10-K, S-1, 20-F etc.")
     ap.add_argument("--cache", default="data/filings")
     args = ap.parse_args()
 
@@ -107,7 +112,7 @@ def main() -> None:
     store = VectorStore(cfg.qdrant_url, cfg.qdrant_collection, embedder.dim)
 
     for ticker in args.tickers:
-        chunks = ingest_one(ticker, args.year, cfg.edgar_user_agent, cache)
+        chunks = ingest_one(ticker, args.year, args.form, cfg.edgar_user_agent, cache)
         if not chunks:
             continue
         vecs = embedder.embed([c.text for c in chunks])
