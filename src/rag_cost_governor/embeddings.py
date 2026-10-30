@@ -12,8 +12,9 @@ class LocalEmbedder:
     collection needs to be configured with.
     """
 
-    def __init__(self, model_name: str = "BAAI/bge-small-en-v1.5") -> None:
-        self._model = TextEmbedding(model_name=model_name)
+    def __init__(self, model_name: str = "BAAI/bge-small-en-v1.5", threads: int = 0) -> None:
+        # threads=0 lets ONNX Runtime use all cores; fastembed otherwise defaults to 1.
+        self._model = TextEmbedding(model_name=model_name, threads=threads)
         self._dim: int | None = None
 
     @property
